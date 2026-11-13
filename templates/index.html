@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VoiceFlow – Voice Accessibility Tool</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script>
+    (function () {
+      var saved = localStorage.getItem('voiceflow-theme');
+      document.documentElement.setAttribute('data-theme', saved === 'light' ? 'light' : 'dark');
+    })();
+  </script>
+  <style>
+    :root {
+      --bg: #080808; --surface: #0f0f0f; --surface-2: #161616; --surface-3: #1f1f1f;
+      --border: #333333; --border-soft: #242424;
+      --text: #fafafa; --muted: #a6a6a6; --faint: #6e6e6e;
+      --accent: #ff1a47; --accent-hi: #ff4f72; --accent-text: #ff5c7d;
+      --accent-soft: rgba(255, 26, 71, 0.1); --accent-line: rgba(255, 26, 71, 0.34);
+      --vital: #16c79a; --vital-soft: rgba(22, 199, 154, 0.1); --success: #16c79a;
+      --danger: #ff4136; --danger-soft: rgba(255, 65, 54, 0.11);
+      --warn-bg: rgba(224, 160, 44, 0.08); --warn-border: rgba(224, 160, 44, 0.3); --warn-text: #e0a02c;
+      --grid: rgba(255, 26, 71, 0.042); --grid-major: rgba(255, 26, 71, 0.072);
+      --glow: 0 0 20px rgba(255, 26, 71, 0.42), 0 0 44px rgba(255, 26, 71, 0.15);
+      --pulse-from: rgba(255, 26, 71, 0.3); --pulse-to: rgba(255, 26, 71, 0);
+      --radius: 8px; --radius-sm: 5px;
+      --mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    [data-theme='light'] {
+      --bg: #f1f2f4; --surface: #ffffff; --surface-2: #f4f6f7; --surface-3: #e8ebee;
+      --border: #d2d7dc; --border-soft: #e3e7eb;
+      --text: #0e1114; --muted: #59626a; --faint: #8b939b;
+      --accent: #d1002f; --accent-hi: #ab0026; --accent-text: #ab0026;
+      --accent-soft: rgba(209, 0, 47, 0.07); --accent-line: rgba(209, 0, 47, 0.26);
+      --vital: #0b8f6d; --vital-soft: rgba(11, 143, 109, 0.09); --success: #0b8f6d;
+      --danger: #c02a20; --danger-soft: rgba(192, 42, 32, 0.09);
+      --warn-bg: rgba(146, 94, 0, 0.07); --warn-border: rgba(146, 94, 0, 0.24); --warn-text: #7a5000;
+      --grid: rgba(209, 0, 47, 0.045); --grid-major: rgba(209, 0, 47, 0.075);
+      --glow: 0 0 0 1px rgba(209, 0, 47, 0.16), 0 6px 20px rgba(209, 0, 47, 0.13);
+      --pulse-from: rgba(209, 0, 47, 0.26); --pulse-to: rgba(209, 0, 47, 0);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100vh; line-height: 1.62;
+      -webkit-font-smoothing: antialiased;
+      transition: background 0.2s, color 0.2s;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        linear-gradient(to right, var(--grid-major) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid-major) 1px, transparent 1px),
+        linear-gradient(to right, var(--grid) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+      background-size: 130px 130px, 130px 130px, 26px 26px, 26px 26px;
+      mask-image: radial-gradient(ellipse 120% 85% at 50% 0%, #000 30%, transparent 100%);
+      -webkit-mask-image: radial-gradient(ellipse 120% 85% at 50% 0%, #000 30%, transparent 100%);
+    }
+    .wrap { position: relative; z-index: 1; max-width: 760px; margin: 0 auto; padding: 2.2rem 1.5rem 5rem; }
+
+    h1, h2, .brand-name, .card-title, .room-section-title, .who-title, .rec-timer, .room-code, .btn, .step { font-family: 'Rajdhani', system-ui, sans-serif; }
+
+    header { position: relative; display: flex; align-items: center; gap: 0.75rem; padding-bottom: 1.3rem; border-bottom: 1px solid var(--border-soft); margin-bottom: 2.4rem; }
+    header::after { content: ''; position: absolute; left: 0; bottom: -1px; width: 62px; height: 1px; background: var(--accent); }
+    .brand { display: flex; align-items: center; gap: 0.7rem; }
+    .brand img { width: 36px; height: 36px; border-radius: var(--radius-sm); flex-shrink: 0; }
+    .brand-name { font-size: 1.32rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.005em; line-height: 1.1; }
+    .brand-tag { font-size: 0.66rem; color: var(--faint); text-transform: uppercase; letter-spacing: 0.16em; font-weight: 500; }
+    .header-actions { margin-left: auto; display: flex; align-items: center; gap: 0.55rem; }
+    .theme-toggle { width: 34px; height: 34px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: border-color 0.15s, color 0.15s; }
+    .theme-toggle:hover { border-color: var(--accent); color: var(--accent-text); }
+    .theme-toggle svg { width: 16px; height: 16px; }
+    .icon-moon { display: none; }
+    [data-theme='dark'] .icon-sun { display: none; }
+    [data-theme='dark'] .icon-moon { display: block; }
+
+    .conn-pill { display: flex; align-items: center; gap: 0.45rem; font-family: 'Space Grotesk', sans-serif; font-size: 0.64rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.13em; padding: 0.42rem 0.7rem; border-radius: var(--radius-sm); background: var(--surface); border: 1px solid var(--border); color: var(--faint); cursor: pointer; transition: border-color 0.15s, color 0.15s; }
+    .conn-pill:hover { border-color: var(--muted); color: var(--muted); }
+    .conn-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+    .conn-pill.live { color: var(--vital); border-color: rgba(22, 199, 154, 0.32); }
+    .conn-pill.live:hover { color: var(--vital); border-color: var(--vital); }
+    .conn-pill.live .conn-dot { background: var(--vital); box-shadow: 0 0 8px var(--vital); animation: lcdot 1.8s ease-in-out infinite; }
+    .conn-pill.err { color: var(--danger); border-color: var(--danger-soft); }
+    .conn-pill.err:hover { color: var(--danger); border-color: var(--danger); }
+    .conn-pill.err .conn-dot { background: var(--danger); }
+    .conn-pill.needs-key { color: var(--warn-text); border-color: var(--warn-border); }
+    .conn-pill.needs-key:hover { color: var(--warn-text); border-color: var(--warn-text); }
+    .conn-pill.needs-key .conn-dot { background: var(--warn-text); }
+
+    .room-section { margin-top: 1.8rem; border-top: 1px solid var(--border-soft); padding-top: 1.5rem; }
+    .room-section-title { font-size: 1.12rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.012em; margin-bottom: 0.4rem; }
+    .room-panel { background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 1.1rem; }
+    .room-code-display { display: flex; align-items: center; gap: 0.75rem; background: var(--bg); border: 1px solid var(--accent-line); border-radius: var(--radius-sm); padding: 0.85rem 1rem; margin: 0.85rem 0 0.6rem; }
+    .room-code { font-family: var(--mono); font-size: 1.5rem; font-weight: 700; letter-spacing: 0.34em; color: var(--accent); flex: 1; text-align: center; text-indent: 0.34em; }
+    .room-link-row { display: flex; align-items: center; gap: 0.5rem; background: var(--bg); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 0.55rem 0.8rem; margin-bottom: 0.8rem; }
+    .room-link-row span { font-family: var(--mono); font-size: 0.72rem; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+    .room-meta { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; }
+    .listener-count { display: flex; align-items: center; gap: 0.45rem; font-size: 0.72rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; }
+    .lc-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--vital); box-shadow: 0 0 8px var(--vital); animation: lcdot 1.8s ease-in-out infinite; }
+    @keyframes lcdot { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .room-active-badge { display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.64rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; padding: 0.32rem 0.7rem; border-radius: 3px; background: var(--accent-soft); border: 1px solid var(--accent-line); color: var(--accent-text); }
+    .room-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.7rem; }
+    .room-actions .btn { font-size: 0.78rem; padding: 0.42rem 0.85rem; }
+    .listen-panel { background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 1.1rem; }
+    .listen-transcript { background: var(--bg); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 1.1rem; min-height: 88px; margin: 0.8rem 0; font-size: 1.08rem; color: var(--text); line-height: 1.65; }
+    .listen-transcript .placeholder { color: var(--faint); font-size: 0.85rem; }
+    .listen-audio-bar { display: flex; align-items: center; gap: 0.75rem; background: var(--bg); border: 1px solid var(--accent-line); border-radius: var(--radius-sm); padding: 0.7rem 1rem; }
+    .listen-pulse { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); flex-shrink: 0; animation: lcdot 1.1s ease-in-out infinite; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <img src="/static/favicon.svg" alt="" />
+        <div>
+          <div class="brand-name">VoiceFlow</div>
+          <div class="brand-tag">Voice Accessibility Tool</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode" onclick="flipTheme()">
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="12" cy="12" r="4" />
+            <path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" />
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" />
+          </svg>
+        </button>
+        <button class="conn-pill" id="plug" onclick="keyPanel()" aria-label="API key settings">
+          <div class="conn-dot"></div>
+          <span id="plug-word">Connecting…</span>
+        </button>
+      </div>
+    </header>
+
+<style>
+.hero { margin-bottom: 2.4rem; }
+.eyebrow { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.64rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.2em; color: var(--accent-text); margin-bottom: 0.95rem; }
+.eyebrow::before { content: ''; width: 22px; height: 1px; background: var(--accent); }
+h1 { font-size: clamp(2.3rem, 6.4vw, 3.5rem); font-weight: 700; line-height: 1.03; text-transform: uppercase; letter-spacing: -0.018em; margin-bottom: 1.15rem; }
+h1 em { font-style: normal; color: var(--accent); text-shadow: 0 0 22px rgba(255, 26, 71, 0.4); }
+[data-theme='light'] h1 em { text-shadow: none; }
+.hero p { color: var(--muted); font-size: 0.98rem; margin-bottom: 0.85rem; max-width: 62ch; }
+.hero p.muted { color: var(--faint); }
+.who-box { background: var(--surface); border: 1px solid var(--border-soft); border-left: 2px solid var(--accent); border-radius: 0 var(--radius) var(--radius) 0; padding: 1.15rem 1.35rem; margin-top: 1.6rem; }
+.who-title { font-size: 0.76rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: var(--accent-text); margin-bottom: 0.6rem; }
+.who-box p { font-size: 0.89rem; color: var(--muted); margin-bottom: 0; }
+
+.steps { display: flex; margin-bottom: 1.4rem; border: 1px solid var(--border-soft); border-radius: var(--radius); overflow: hidden; }
+.step { flex: 1; display: flex; align-items: center; gap: 0.6rem; padding: 0.75rem 1.05rem; font-size: 0.92rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; background: var(--surface); color: var(--faint); cursor: pointer; border-right: 1px solid var(--border-soft); transition: background 0.15s, color 0.15s; }
+.step:last-child { border-right: none; }
+.step:hover { color: var(--muted); }
+.step.active { background: var(--accent-soft); color: var(--accent-text); box-shadow: inset 0 -2px 0 var(--accent); }
+.step.done { color: var(--vital); box-shadow: inset 0 -2px 0 rgba(22, 199, 154, 0.5); }
+.step-n { font-family: var(--mono); font-size: 0.66rem; font-weight: 700; letter-spacing: 0.02em; color: var(--faint); flex-shrink: 0; padding-top: 1px; }
+.step.active .step-n { color: var(--accent); }
+.step.done .step-n { color: var(--vital); }
+
+.key-card { border-color: var(--accent-line); margin-bottom: 1.9rem; }
+.key-steps { font-size: 0.78rem; color: var(--muted); margin: 0 0 1.15rem; padding-left: 1.1rem; }
+.key-steps li { margin-bottom: 0.25rem; }
+.key-steps a { color: var(--accent-text); text-decoration: none; border-bottom: 1px solid var(--accent-line); }
+.key-steps a:hover { border-bottom-color: var(--accent); }
+.checkline { display: flex; align-items: flex-start; gap: 0.6rem; font-size: 0.85rem; font-weight: 500; color: var(--text); text-transform: none; letter-spacing: normal; margin-bottom: 0; cursor: pointer; }
+.checkline input { width: auto; accent-color: var(--accent); margin-top: 0.32rem; flex-shrink: 0; }
+.checkline span { line-height: 1.5; }
+.key-note { font-size: 0.77rem; color: var(--faint); line-height: 1.62; margin: 1rem 0 1.2rem; padding-left: 0.85rem; border-left: 1px solid var(--border); }
+.key-actions { display: flex; gap: 0.55rem; flex-wrap: wrap; }
+
+.field { margin-bottom: 1rem; }
+label { display: block; font-size: 0.66rem; font-weight: 600; color: var(--faint); text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 0.45rem; }
+input[type='text'], input[type='password'], textarea { width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.72rem 0.95rem; font-family: 'Space Grotesk', sans-serif; font-size: 0.92rem; color: var(--text); background: var(--bg); outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
+input[type='text']::placeholder, input[type='password']::placeholder, textarea::placeholder { color: var(--faint); }
+input[type='text']:focus, input[type='password']:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+input[type='password'] { font-family: var(--mono); font-size: 0.85rem; letter-spacing: 0.02em; }
+textarea { resize: vertical; min-height: 112px; line-height: 1.62; }
+</style>
+
+<script>
+let myKey = localStorage.getItem('voiceflow-api-key') || '';
+let serverSays = { public_mode: false, server_key_present: false, can_save_locally: false };
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function flash(id, msg, type) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'status on ' + (type || 'info');
+}
+
+function mmss(sec) {
+  const m = Math.floor(sec / 60), s = Math.round(sec % 60);
+  return m + ':' + String(s).padStart(2, '0');
+}
+
+function flipTheme() {
+  const now = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  const next = now === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('voiceflow-theme', next);
+}
+
+function keyPanel() {
+  const box = document.getElementById('key-panel');
+  const opening = !box.classList.contains('active');
+  box.classList.toggle('active');
+  if (opening) {
+    box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.getElementById('api-key-input').focus();
+  }
+}
+
+function paintKeyBox() {
+  document.getElementById('key-local-row').style.display = serverSays.can_save_locally ? '' : 'none';
+  document.getElementById('key-forget').style.display = myKey ? '' : 'none';
+  const note = document.getElementById('key-note');
+  if (serverSays.can_save_locally) {
+    note.textContent = 'Your key is kept in this browser. Ticking the box also writes it to credentials.json next to main.py, which only works because you are on the same computer as the server.';
+  } else if (serverSays.public_mode) {
+    note.textContent = 'Your key is kept in this browser only. It is sent with each request, used once, and never written to the server or shared with anyone else using this site.';
+  } else {
+    note.textContent = 'Your key is kept in this browser only and sent with each request. It is never written to the server.';
+  }
+}
+
+async function checkConn() {
+  const pill = document.getElementById('plug'), word = document.getElementById('plug-word');
+  pill.className = 'conn-pill';
+  word.textContent = 'Checking…';
+  let d;
+  try {
+    const r = await fetch('/api/status', { headers: myKey ? { 'X-API-Key': myKey } : {} });
+    d = await r.json();
+  } catch {
+    pill.classList.add('err');
+    word.textContent = 'Server unreachable';
+    return false;
+  }
+  if (d.ok) {
+    pill.classList.add('live');
+    word.textContent = 'Connected · ' + d.name;
+    document.getElementById('key-panel').classList.remove('active');
+    return true;
+  }
+  if (d.reason === 'invalid_key') {
+    pill.classList.add('err');
+    word.textContent = 'Key rejected';
+  } else if (d.reason === 'unreachable') {
+    pill.classList.add('err');
+    word.textContent = 'ElevenLabs unreachable';
+  } else {
+    pill.classList.add('needs-key');
+    word.textContent = 'Add API key';
+  }
+  document.getElementById('key-panel').classList.add('active');
+  return false;
+}
+
+async function hookUpKey() {
+  const box = document.getElementById('api-key-input');
+  const val = box.value.trim();
+  if (!val) {
+    flash('key-status', 'Paste your ElevenLabs API key first.', 'err');
+    return;
+  }
+  const btn = document.getElementById('key-btn');
+  btn.innerHTML = '<div class="spin"></div> Checking…';
+  btn.disabled = true;
+  flash('key-status', 'Checking the key with ElevenLabs…', 'info');
+  try {
+    const r = await fetch('/api/status', { headers: { 'X-API-Key': val } });
+    const d = await r.json();
+    if (!d.ok) {
+      flash('key-status', d.reason === 'invalid_key' ? 'ElevenLabs rejected that key. Check you copied the whole thing.' : "Couldn't reach ElevenLabs just then. Try again in a moment.", 'err');
+      return;
+    }
+    myKey = val;
+    localStorage.setItem('voiceflow-api-key', val);
+    voiceStash = null;
+    box.value = '';
+
+    const tickbox = document.getElementById('save-local');
+    if (serverSays.can_save_locally && tickbox.checked) {
+      try {
+        const sr = await fetch('/api/key/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ APIkey: val }) });
+        if (!sr.ok) {
+          const sd = await sr.json();
+          throw new Error(sd.detail || 'Save failed');
+        }
+        flash('key-status', 'Connected as ' + d.name + ', and saved to credentials.json.', 'ok');
+      } catch (err) {
+        flash('key-status', 'Connected as ' + d.name + ', but writing credentials.json failed: ' + err.message, 'err');
+        paintKeyBox();
+        return;
+      }
+    } else {
+      flash('key-status', 'Connected as ' + d.name + '.', 'ok');
+    }
+    paintKeyBox();
+    setTimeout(() => {
+      document.getElementById('key-status').classList.remove('on');
+      checkConn();
+    }, 1100);
+  } catch (e) {
+    flash('key-status', 'Could not reach the server: ' + e.message, 'err');
+  } finally {
+    btn.innerHTML = 'Connect';
+    btn.disabled = false;
+  }
+}
+
+async function dropKey() {
+  const alsoDisk = serverSays.can_save_locally;
+  if (alsoDisk && !confirm('Remove the key from this browser and from credentials.json?')) return;
+  myKey = '';
+  localStorage.removeItem('voiceflow-api-key');
+  voiceStash = null;
+  pickedId = null;
+  pickedName = '';
+  document.getElementById('api-key-input').value = '';
+  if (alsoDisk) {
+    try { await fetch('/api/key/save', { method: 'DELETE' }); } catch {}
+  }
+  paintKeyBox();
+  flash('key-status', 'Key removed.', 'ok');
+  checkConn();
+}
+</script>
+
+    <!-- listener page, shows when the url has ?room=CODE -->
+    <div id="listener-view" style="display: none">
+      <div class="hero">
+        <div class="eyebrow">Listener</div>
+        <h1>You're listening to a <em>live session</em></h1>
+        <p class="muted">Keep this tab open in the background. Audio will play automatically as the other person types.</p>
+      </div>
+      <div class="card active">
+        <div class="card-title">Live Room</div>
+        <div class="listen-panel">
+          <div class="room-meta">
+            <div class="listener-count">
+              <div class="lc-dot"></div>
+              <span id="listen-room-code"></span>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-full" id="enable-audio-btn" onclick="wakeAudio()" style="margin-bottom: 0.75rem">
+            Tap here first to enable audio playback
+          </button>
+          <div class="listen-transcript" id="listen-transcript">
+            <span class="placeholder">Waiting for the other person to speak…</span>
+          </div>
+          <div class="listen-audio-bar" id="listen-audio-bar" style="display: none">
+            <div class="listen-pulse"></div>
+            <audio id="listen-audio" style="flex: 1; height: 30px; accent-color: var(--accent)"></audio>
+          </div>
+          <div class="status" id="listen-status"></div>
+        </div>
+      </div>
+    </div>
+
+<style>
+  .card { position: relative; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius); padding: 1.8rem; margin-bottom: 1rem; display: none; }
+  .card.active { display: block; }
+  .card::before, .card::after { content: ''; position: absolute; width: 13px; height: 13px; pointer-events: none; border-color: var(--accent); opacity: 0.5; }
+  .card::before { top: -1px; left: -1px; border-top: 1px solid; border-left: 1px solid; border-top-left-radius: var(--radius); }
+  .card::after { bottom: -1px; right: -1px; border-bottom: 1px solid; border-right: 1px solid; border-bottom-right-radius: var(--radius); }
+  .card-title { font-size: 1.28rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.012em; margin-bottom: 0.35rem; line-height: 1.15; }
+  .card-desc { font-size: 0.86rem; color: var(--muted); margin-bottom: 1.35rem; line-height: 1.68; }
+
+  .tip { display: flex; gap: 0.7rem; background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: var(--radius-sm); padding: 0.85rem 1rem; margin-bottom: 1.25rem; font-size: 0.82rem; color: var(--warn-text); line-height: 1.62; }
+  .tip svg { width: 15px; height: 15px; flex-shrink: 0; margin-top: 0.22rem; }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.62rem 1.25rem; border-radius: var(--radius-sm); border: 1px solid transparent; font-size: 0.95rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.18s; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: var(--accent-hi); box-shadow: var(--glow); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-outline { background: transparent; border-color: var(--border); color: var(--muted); }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent-text); }
+  .btn-danger { background: transparent; border-color: var(--danger-soft); color: var(--danger); }
+  .btn-danger:hover { background: var(--danger-soft); border-color: var(--danger); }
+  .btn-full { width: 100%; }
+  .btn-lg { padding: 0.82rem 1.4rem; font-size: 1.08rem; }
+
+  .status { padding: 0.6rem 0.9rem; border-radius: var(--radius-sm); font-size: 0.82rem; font-weight: 500; margin-top: 0.75rem; display: none; border-left: 2px solid transparent; }
+  .status.on { display: block; }
+  .status.info { background: var(--accent-soft); color: var(--accent-text); border-left-color: var(--accent); }
+  .status.ok { background: var(--vital-soft); color: var(--vital); border-left-color: var(--vital); }
+  .status.err { background: var(--danger-soft); color: var(--danger); border-left-color: var(--danger); }
+
+  .spin { width: 14px; height: 14px; border: 2px solid rgba(255, 255, 255, 0.3); border-top-color: #fff; border-radius: 50%; animation: sp 0.55s linear infinite; flex-shrink: 0; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+</style>
+
+    <div id="host-view">
+      <div class="card key-card" id="key-panel">
+        <div class="card-title">Connect your ElevenLabs key</div>
+        <p class="card-desc">
+          VoiceFlow runs on your own ElevenLabs account, so nothing you record is tied to
+          anyone else's. Cloning needs a Starter tier account or higher.
+        </p>
+        <ol class="key-steps">
+          <li>
+            Sign in at
+            <a href="https://elevenlabs.io" target="_blank" rel="noopener noreferrer">elevenlabs.io</a>.
+          </li>
+          <li>Open your profile menu, then <strong>API Keys</strong>.</li>
+          <li>Create a key and paste it below.</li>
+        </ol>
+
+        <div class="field">
+          <label for="api-key-input">API key</label>
+          <input type="password" id="api-key-input" placeholder="sk_…" autocomplete="off" spellcheck="false" onkeydown="if (event.key === 'Enter') hookUpKey();" />
+        </div>
+
+        <div class="field" id="key-local-row" style="display: none">
+          <label class="checkline">
+            <input type="checkbox" id="save-local" />
+            <span>Also save it to <code>credentials.json</code> on this computer, so this machine doesn't ask again</span>
+          </label>
+        </div>
+
+        <div class="key-note" id="key-note"></div>
+
+        <div class="key-actions">
+          <button class="btn btn-primary" id="key-btn" onclick="hookUpKey()">Connect</button>
+          <button class="btn btn-outline" id="key-forget" onclick="dropKey()" style="display: none">Forget key</button>
+        </div>
+        <div class="status" id="key-status" role="alert" aria-live="assertive"></div>
+      </div>
+
+      <div class="hero">
+        <div class="eyebrow">Assistive Speech System</div>
+        <h1>Type it. <em>Hear it.</em><br />In your own voice.</h1>
+        <p>
+          VoiceFlow clones your voice from a short recording, then turns anything you type
+          into speech that sounds like you. There's no account to create. Record once, then
+          start typing.
+        </p>
+        <p>
+          When you want someone else to hear you, open a live room and share the link. They
+          keep that tab open in the background, with no chat window to read and nothing to
+          check. When you type and press Speak, your voice plays on their device, the same way
+          it would if you'd said it yourself.
+        </p>
+        <div class="who-box">
+          <div class="who-title">Who this is for</div>
+          <p>
+            Someone with vocal cord dysfunction (VCD) can lose their voice mid-sentence during
+            a flare-up. Instead of the conversation stalling or switching to text messages,
+            they can type the rest and keep talking, out loud, in their own voice. Someone
+            with Tourette's whose tics make sustained speech difficult or unpredictable can
+            type at their own pace and have it spoken clearly and continuously, without
+            interruption. Either way, the person they're talking to doesn't need to watch a
+            screen. They just listen, like always.
+          </p>
+        </div>
+      </div>
+
+      <div class="steps">
+        <div class="step active" id="nav-1" onclick="jump(1)" tabindex="0" onkeydown="if (event.key === 'Enter') jump(1);">
+          <div class="step-n">01</div>
+          Clone Voice
+        </div>
+        <div class="step" id="nav-2" onclick="jump(2)" tabindex="0" onkeydown="if (event.key === 'Enter') jump(2);">
+          <div class="step-n">02</div>
+          Speak &amp; Share
+        </div>
+      </div>
+
+      <div class="card active" id="step-1">
+        <div class="card-title">Record at least one minute</div>
+        <p class="card-desc">
+          A full minute of clear, natural speech gives VoiceFlow enough to work with to build
+          an accurate clone. Read anything: a recipe, a news article, your own thoughts. The
+          content doesn't matter, just keep talking.
+        </p>
+        <div class="tip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 16v-4M12 8h.01" />
+          </svg>
+          <span>If speaking continuously for a minute isn't possible right now, that's okay. You
+            can also upload an existing recording (a voicemail, a video, anything with at
+            least a minute of your voice in it).</span>
+        </div>
+
+        <div class="rec-area">
+          <div class="mic-btn" id="mic-btn" onclick="hitMic()" role="button" tabindex="0" aria-label="Start or stop recording" onkeydown="if (event.key === 'Enter' || event.key === ' ') hitMic();">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+              <path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v3M9 21h6" />
+            </svg>
+          </div>
+          <div class="rec-timer" id="rec-timer">0:00</div>
+          <div class="wave" id="wave" aria-hidden="true">
+            <svg viewBox="0 0 240 44" preserveAspectRatio="none">
+              <g class="ecg-scroll">
+                <path class="ecg" d="M0,22 L12,22 C15,14 21,14 24,22 L34,22 L37,27 L41,5 L45,34 L49,22 L60,22 C66,11 74,11 80,22 L120,22 L132,22 C135,14 141,14 144,22 L154,22 L157,27 L161,5 L165,34 L169,22 L180,22 C186,11 194,11 200,22 L240,22" />
+              </g>
+            </svg>
+          </div>
+          <div class="rec-prog"><div class="rec-prog-fill" id="rec-fill"></div></div>
+          <div class="rec-hint" id="rec-hint">Tap the microphone and start talking. Aim for 1:00</div>
+        </div>
+        <div class="dur-hint" id="len-note"></div>
+
+<style>
+.rec-area { border: 1px solid var(--border-soft); border-radius: var(--radius); background: var(--surface-2); padding: 2rem 1.5rem 1.7rem; text-align: center; }
+.mic-btn { position: relative; width: 78px; height: 78px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; cursor: pointer; transition: border-color 0.2s, background 0.2s; }
+.mic-btn svg { width: 28px; height: 28px; color: var(--muted); transition: color 0.2s; }
+.mic-btn:hover { border-color: var(--accent); }
+.mic-btn:hover svg { color: var(--accent-text); }
+.mic-btn.recording { background: var(--accent-soft); border-color: var(--accent); animation: pulse 1.4s ease-out infinite; }
+.mic-btn.recording svg { color: var(--accent); }
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 var(--pulse-from); }
+  70%, 100% { box-shadow: 0 0 0 16px var(--pulse-to); }
+}
+.rec-timer { font-size: 2.1rem; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; color: var(--accent); margin: 0.1rem 0 0.2rem; display: none; line-height: 1; }
+.rec-timer.on { display: block; }
+.rec-prog { max-width: 260px; margin: 0.7rem auto 0.55rem; background: var(--surface-3); border-radius: 2px; height: 3px; overflow: hidden; }
+.rec-prog-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.4s linear; }
+.rec-hint { font-size: 0.74rem; color: var(--faint); letter-spacing: 0.02em; }
+
+.wave { height: 44px; opacity: 0; transition: opacity 0.25s; margin: 0.2rem auto; max-width: 280px; }
+.wave.on { opacity: 1; }
+.wave svg { width: 100%; height: 44px; display: block; overflow: hidden; }
+.ecg { fill: none; stroke: var(--accent); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+[data-theme='dark'] .ecg { filter: drop-shadow(0 0 4px rgba(255, 26, 71, 0.6)); }
+.ecg-scroll { animation: ecg 1.5s linear infinite; }
+@keyframes ecg {
+  from { transform: translateX(0); }
+  to { transform: translateX(-120px); }
+}
+
+.dur-hint { font-size: 0.79rem; color: var(--muted); margin-top: 0.75rem; text-align: center; min-height: 1.1em; }
+.dur-hint.ok { color: var(--vital); font-weight: 600; }
+.dur-hint.warn { color: var(--warn-text); font-weight: 600; }
+
+.divider { display: flex; align-items: center; gap: 0.9rem; margin: 1.15rem 0 0.8rem; font-size: 0.64rem; color: var(--faint); text-transform: uppercase; letter-spacing: 0.18em; }
+.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border-soft); }
+.file-drop { display: flex; align-items: center; justify-content: center; gap: 0.6rem; border: 1px dashed var(--border); border-radius: var(--radius-sm); padding: 0.95rem; text-align: center; cursor: pointer; font-size: 0.83rem; color: var(--faint); transition: border-color 0.15s, color 0.15s, background 0.15s; }
+.file-drop svg { width: 17px; height: 17px; flex-shrink: 0; }
+.file-drop:hover, .file-drop.over { border-color: var(--accent); color: var(--accent-text); background: var(--accent-soft); }
+#file-input { display: none; }
+.audio-row { display: none; align-items: center; gap: 0.8rem; background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 0.75rem 0.95rem; margin-top: 0.9rem; }
+.audio-row.on { display: flex; }
+audio { flex: 1; height: 32px; accent-color: var(--accent); }
+.aname { font-family: var(--mono); font-size: 0.7rem; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
+</style>
+
+        <div class="divider">or upload a recording</div>
+        <div class="file-drop" id="file-drop" role="button" tabindex="0"
+          onclick="document.getElementById('file-input').click()"
+          onkeydown="if (event.key === 'Enter') document.getElementById('file-input').click();"
+          ondragover="event.preventDefault(); this.classList.add('over');"
+          ondragleave="this.classList.remove('over')"
+          ondrop="dropped(event)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 16V4M8 8l4-4 4 4M4 20h16" />
+          </svg>
+          <span id="file-drop-label">Drop an audio file here, or click to browse</span>
+          <input type="file" id="file-input" accept="audio/*" onchange="gotFile(this.files[0])" />
+        </div>
+
+        <div class="audio-row" id="rec-preview">
+          <span class="aname" id="rec-name">recording</span>
+          <audio id="rec-audio" controls></audio>
+        </div>
+
+        <div class="field" style="margin-top: 1.4rem">
+          <label for="voice-name">Give your voice a name</label>
+          <input type="text" id="voice-name" placeholder="e.g. My Voice" />
+        </div>
+        <button class="btn btn-primary btn-full btn-lg" id="clone-btn" onclick="makeClone()">Create my voice clone</button>
+        <div class="status" id="clone-status" role="alert" aria-live="assertive"></div>
+      </div>
+
+      <div class="card" id="step-2">
+        <div class="card-title">Speak &amp; Share</div>
+        <p class="card-desc">
+          Type something and press Speak to hear it in your cloned voice. To let someone else
+          hear it too, in real time and without watching a chat, open a live room near the
+          bottom of this page and send them the link.
+        </p>
+
+        <div class="field">
+          <label>Quick phrases</label>
+          <div class="phrases">
+            <button class="phrase" onclick="usePhrase(this)">Yes, please</button>
+            <button class="phrase" onclick="usePhrase(this)">No, thank you</button>
+            <button class="phrase" onclick="usePhrase(this)">I need help</button>
+            <button class="phrase" onclick="usePhrase(this)">Could you repeat that?</button>
+            <button class="phrase" onclick="usePhrase(this)">I'm in pain</button>
+            <button class="phrase" onclick="usePhrase(this)">Please give me a moment</button>
+            <button class="phrase" onclick="usePhrase(this)">Call for help</button>
+            <button class="phrase" onclick="usePhrase(this)">I understand</button>
+          </div>
+        </div>
+
+        <div class="sel-bar" id="sel-bar">
+          Voice: <strong id="sel-name">Not selected</strong>
+          <button class="btn btn-outline" style="margin-left: auto; padding: 0.25rem 0.65rem; font-size: 0.72rem" onclick="changeVoice()">Change</button>
+        </div>
+
+        <div id="voice-picker">
+          <label>Choose a voice</label>
+          <div class="voice-tabs">
+            <button class="vtab active" id="tab-cloned" onclick="showTab('cloned')">My Voices</button>
+            <button class="vtab" id="tab-premade" onclick="showTab('premade')">ElevenLabs Voices</button>
+          </div>
+          <div class="vgrid" id="vgrid-cloned" role="list"></div>
+          <div class="vgrid" id="vgrid-premade" role="list" style="display: none"></div>
+        </div>
+
+        <div class="field" style="margin-top: 1.3rem">
+          <label for="saybox">What would you like to say?</label>
+          <textarea id="saybox" placeholder="Type here, or tap a phrase above…" onkeydown="sayKey(event)"></textarea>
+        </div>
+
+<style>
+.voice-tabs { display: flex; gap: 0.4rem; margin-bottom: 0.7rem; }
+.vtab { flex: 1; padding: 0.55rem 0.8rem; border-radius: var(--radius-sm); border: 1px solid var(--border); background: transparent; color: var(--faint); font-family: 'Space Grotesk', sans-serif; font-size: 0.79rem; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.vtab:hover { border-color: var(--border); color: var(--muted); }
+.vtab.active { background: var(--accent-soft); color: var(--accent-text); border-color: var(--accent); }
+.vtab .count { font-family: var(--mono); font-size: 0.7rem; font-weight: 400; opacity: 0.7; margin-left: 0.35rem; }
+.vgrid { display: grid; gap: 0.5rem; }
+.vcard { display: flex; align-items: center; gap: 0.85rem; background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 0.8rem 0.95rem; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+.vcard:hover { border-color: var(--border); }
+.vcard.selected { border-color: var(--accent); background: var(--accent-soft); }
+.vicon { width: 34px; height: 34px; border-radius: var(--radius-sm); background: var(--surface-3); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.vicon svg { width: 15px; height: 15px; color: var(--muted); }
+.vcard.selected .vicon { background: var(--accent); }
+.vcard.selected .vicon svg { color: #fff; }
+.vname { font-size: 0.88rem; font-weight: 600; }
+.vtag { display: inline-block; font-family: var(--mono); font-size: 0.6rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; padding: 0.1rem 0.4rem; border-radius: 3px; background: var(--surface-3); color: var(--faint); margin-top: 0.18rem; }
+.vempty { font-size: 0.83rem; color: var(--faint); padding: 0.7rem 0.2rem; }
+.sel-bar { display: none; align-items: center; gap: 0.7rem; background: var(--accent-soft); border: 1px solid var(--accent-line); border-radius: var(--radius-sm); padding: 0.6rem 0.95rem; margin-bottom: 1rem; font-size: 0.83rem; color: var(--muted); }
+.sel-bar.on { display: flex; }
+.sel-bar strong { color: var(--accent-text); font-weight: 600; }
+
+.phrases { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; }
+.phrase { font-family: 'Space Grotesk', sans-serif; font-size: 0.79rem; padding: 0.32rem 0.7rem; border-radius: var(--radius-sm); background: var(--surface-2); border: 1px solid var(--border-soft); color: var(--muted); cursor: pointer; transition: all 0.15s; }
+.phrase:hover { border-color: var(--accent); color: var(--accent-text); background: var(--accent-soft); }
+
+details { margin-bottom: 1rem; border-top: 1px solid var(--border-soft); padding-top: 0.7rem; }
+summary { font-size: 0.66rem; font-weight: 600; color: var(--faint); cursor: pointer; text-transform: uppercase; letter-spacing: 0.15em; padding: 0.25rem 0; user-select: none; }
+summary:hover { color: var(--muted); }
+.srow { display: flex; align-items: center; gap: 0.8rem; margin-top: 0.65rem; }
+.slabel { font-size: 0.78rem; color: var(--muted); width: 140px; flex-shrink: 0; }
+input[type='range'] { flex: 1; accent-color: var(--accent); height: 3px; cursor: pointer; }
+.sval { font-family: var(--mono); font-size: 0.73rem; color: var(--accent-text); width: 34px; text-align: right; font-variant-numeric: tabular-nums; }
+
+.tts-out { display: none; background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 1.05rem; margin-top: 1rem; }
+.tts-out.on { display: block; }
+.out-lbl { font-size: 0.64rem; font-weight: 600; color: var(--faint); text-transform: uppercase; letter-spacing: 0.18em; margin-bottom: 0.7rem; }
+.tts-out audio { width: 100%; accent-color: var(--accent); }
+.out-actions { margin-top: 0.7rem; }
+</style>
+
+        <details>
+          <summary>Voice settings</summary>
+          <div class="srow">
+            <span class="slabel">Stability</span><input type="range" min="0" max="1" step="0.01" value="0.5" id="stab" oninput="document.getElementById('sv1').textContent = parseFloat(this.value).toFixed(2)" /><span class="sval" id="sv1">0.50</span>
+          </div>
+          <div class="srow">
+            <span class="slabel">Clarity + Boost</span><input type="range" min="0" max="1" step="0.01" value="0.75" id="sim" oninput="document.getElementById('sv2').textContent = parseFloat(this.value).toFixed(2)" /><span class="sval" id="sv2">0.75</span>
+          </div>
+          <div class="srow">
+            <span class="slabel">Style</span><input type="range" min="0" max="1" step="0.01" value="0.0" id="style" oninput="document.getElementById('sv3').textContent = parseFloat(this.value).toFixed(2)" /><span class="sval" id="sv3">0.00</span>
+          </div>
+        </details>
+
+        <details>
+          <summary>Playback settings</summary>
+          <div class="srow" style="margin-top: 0.6rem">
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; font-weight: 500; color: var(--text); text-transform: none; letter-spacing: normal; margin-bottom: 0; cursor: pointer;">
+              <input type="checkbox" id="play-for-me" checked style="width: auto; accent-color: var(--accent)" />
+              Play this out loud for me too
+            </label>
+          </div>
+          <div class="srow">
+            <span class="slabel">Listener delay</span>
+            <input type="range" min="0" max="10" step="0.5" value="0" id="broadcast-delay" oninput="document.getElementById('delay-val').textContent = parseFloat(this.value).toFixed(1) + 's'" />
+            <span class="sval" id="delay-val" style="width: 46px">0.0s</span>
+          </div>
+          <p style="font-size: 0.76rem; color: var(--faint); margin-top: 0.5rem">
+            Adds a pause before anyone in a live room hears the audio. The default (0.0s)
+            sends it as soon as it's ready.
+          </p>
+        </details>
+
+        <button class="btn btn-primary btn-full btn-lg" id="tts-btn" onclick="sayIt()">Speak</button>
+        <div class="status" id="tts-status" role="alert" aria-live="assertive"></div>
+
+        <div class="tts-out" id="tts-out">
+          <div class="out-lbl">Generated audio</div>
+          <audio id="tts-audio" controls></audio>
+          <div class="out-actions">
+            <a id="tts-dl" class="btn btn-outline" download="speech.mp3" style="font-size: 0.78rem; padding: 0.4rem 0.85rem">Download</a>
+          </div>
+        </div>
+
+        <div class="room-section">
+          <div class="room-section-title">Live Room</div>
+          <p class="card-desc" style="margin-bottom: 1rem">
+            Open a room and send the code or link to whoever you're talking with. They keep it
+            open in the background. When you press Speak, they hear it immediately, without
+            needing to read anything.
+          </p>
+
+          <div id="room-idle">
+            <button class="btn btn-outline btn-full" onclick="openRoom()">Open a live room</button>
+          </div>
+
+          <div id="room-active" style="display: none">
+            <div class="room-panel">
+              <div class="room-meta">
+                <div class="room-active-badge">
+                  <span class="lc-dot" style="background: var(--accent); box-shadow: 0 0 8px var(--accent)"></span>
+                  Room open
+                </div>
+                <div class="listener-count">
+                  <div class="lc-dot"></div>
+                  <span id="lc-num">0</span> listening
+                </div>
+              </div>
+              <div class="room-code-display">
+                <div class="room-code" id="room-code-txt">········</div>
+              </div>
+              <div class="room-link-row">
+                <span id="room-link-txt"></span>
+              </div>
+              <div class="room-actions">
+                <button class="btn btn-outline" onclick="copyCode(this)">Copy code</button>
+                <button class="btn btn-outline" onclick="copyLink(this)">Copy link</button>
+                <button class="btn btn-danger" style="margin-left: auto" onclick="shutRoom()">Close room</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="room-section" style="margin-top: 1rem; padding-top: 1rem">
+            <div class="room-section-title" style="font-size: 0.95rem; margin-bottom: 0.6rem">Join a room as a listener</div>
+            <div style="display: flex; gap: 0.6rem">
+              <input type="text" id="join-code" placeholder="Enter 8-character room code" maxlength="8"
+                style="text-transform: uppercase; font-family: var(--mono); letter-spacing: 0.16em; font-size: 0.95rem; font-weight: 700;"
+                oninput="this.value = this.value.toUpperCase()"
+                onkeydown="if (event.key === 'Enter') hopIn();" />
+              <button class="btn btn-primary" onclick="hopIn()">Join</button>
+            </div>
+            <div class="status" id="join-status" role="alert" aria-live="assertive"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<style>
+footer { position: relative; z-index: 1; text-align: center; padding: 2rem 0 1.2rem; font-size: 0.63rem; color: var(--faint); text-transform: uppercase; letter-spacing: 0.2em; }
+@media (max-width: 520px) {
+  .wrap { padding: 1.6rem 1.1rem 4rem; }
+  .step { padding: 0.6rem 0.7rem; font-size: 0.8rem; gap: 0.4rem; }
+  .card { padding: 1.25rem 1.05rem; }
+  .room-code { font-size: 1.15rem; letter-spacing: 0.22em; text-indent: 0.22em; }
+  .voice-tabs { flex-direction: column; }
+  .slabel { width: 110px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ecg-scroll, .lc-dot, .listen-pulse, .mic-btn.recording, .conn-pill.live .conn-dot { animation: none; }
+}
+</style>
+
+  <footer>VoiceFlow · Voice Accessibility Tool</footer>
+
+<script>
+let clip = null, clipName = 'recording.webm', recorder = null, bits = [], micOn = false, ticker = null, secs = 0;
+let clipLen = 0;
+let pickedId = null, pickedName = '';
+let voiceStash = null, whichTab = 'cloned';
+let myRoom = null, roomSecret = null, roomSock = null, countTimer = null;
+let earSock = null;
+
+const NEED = 60;
+const CODE_LEN = 8;
+const MAX_CHARS = 2500;
+
+const faceSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-3.3 3.6-6 8-6s8 2.7 8 6"/></svg>`;
+const sparkSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></svg>`;
+
+function jump(n) {
+  [1, 2].forEach(i => {
+    document.getElementById('step-' + i).classList.toggle('active', i === n);
+    const tab = document.getElementById('nav-' + i);
+    tab.classList.remove('active', 'done');
+    if (i === n) tab.classList.add('active');
+    else if (i < n) tab.classList.add('done');
+  });
+  if (n === 2) loadVoices();
+}
+
+async function hitMic() {
+  if (micOn) {
+    recorder && recorder.stop();
+    clearInterval(ticker);
+    micOn = false;
+    document.getElementById('mic-btn').classList.remove('recording');
+    document.getElementById('rec-timer').classList.remove('on');
+    document.getElementById('wave').classList.remove('on');
+    document.getElementById('rec-hint').textContent = 'Saved. Preview below. Tap the microphone to re-record.';
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    recorder = new MediaRecorder(stream);
+    bits = [];
+    recorder.ondataavailable = e => { if (e.data.size > 0) bits.push(e.data); };
+    recorder.onstop = () => {
+      // Safari and Firefox hand back ogg/mp4, not webm, so take the type the recorder actually used
+      const kind = (recorder.mimeType || 'audio/webm').split(';')[0];
+      const ext = kind.split('/')[1] || 'webm';
+      clip = new Blob(bits, { type: kind });
+      clipName = 'recording.' + ext;
+      stream.getTracks().forEach(t => t.stop());
+      document.getElementById('rec-audio').src = URL.createObjectURL(clip);
+      document.getElementById('rec-name').textContent = clipName;
+      document.getElementById('rec-preview').classList.add('on');
+      clipLen = secs;
+      lengthNote();
+    };
+    recorder.start();
+    micOn = true;
+    secs = 0;
+    document.getElementById('len-note').textContent = '';
+    document.getElementById('len-note').className = 'dur-hint';
+    ticker = setInterval(() => {
+      secs++;
+      document.getElementById('rec-timer').textContent = mmss(secs);
+      document.getElementById('rec-fill').style.width = Math.min(100, Math.round((secs / NEED) * 100)) + '%';
+      document.getElementById('rec-hint').textContent =
+        secs < NEED
+          ? 'Recording… ' + mmss(secs) + ' of ' + mmss(NEED)
+          : "Recording... " + mmss(secs) + ". That's enough, stop whenever you're ready";
+    }, 1000);
+    document.getElementById('mic-btn').classList.add('recording');
+    document.getElementById('rec-timer').classList.add('on');
+    document.getElementById('wave').classList.add('on');
+  } catch {
+    flash('clone-status', 'Microphone access denied. Please upload a file instead.', 'err');
+  }
+}
+
+function gotFile(f) {
+  if (!f) return;
+  if (f.size > 25 * 1024 * 1024) {
+    flash('clone-status', 'That file is over 25 MB. A minute or two of speech is plenty.', 'err');
+    return;
+  }
+  clip = f;
+  clipName = f.name || 'recording';
+  clipLen = 0;
+  document.getElementById('file-drop-label').textContent = 'Selected: ' + f.name;
+  document.getElementById('rec-audio').src = URL.createObjectURL(f);
+  document.getElementById('rec-name').textContent = f.name;
+  document.getElementById('rec-preview').classList.add('on');
+  document.getElementById('len-note').textContent = 'Checking length…';
+  document.getElementById('len-note').className = 'dur-hint';
+  const probe = new Audio();
+  probe.preload = 'metadata';
+  probe.src = URL.createObjectURL(f);
+  probe.onloadedmetadata = () => {
+    if (isFinite(probe.duration) && probe.duration > 0) clipLen = Math.round(probe.duration);
+    else clipLen = -1;
+    lengthNote();
+  };
+  probe.onerror = () => { clipLen = -1; lengthNote(); };
+}
+
+function dropped(e) {
+  e.preventDefault();
+  document.getElementById('file-drop').classList.remove('over');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('audio/')) gotFile(f);
+}
+
+function lengthNote() {
+  const el = document.getElementById('len-note');
+  if (clipLen === -1) {
+    el.textContent = "Couldn't detect length automatically. Make sure it's at least 1:00 before cloning.";
+    el.className = 'dur-hint';
+    return;
+  }
+  if (clipLen <= 0) {
+    el.textContent = '';
+    el.className = 'dur-hint';
+    return;
+  }
+  const t = mmss(clipLen);
+  if (clipLen >= NEED) {
+    el.textContent = t + " recorded. That's enough for a good clone.";
+    el.className = 'dur-hint ok';
+  } else {
+    el.textContent = t + ' recorded. VoiceFlow needs at least 1:00.';
+    el.className = 'dur-hint warn';
+  }
+}
+
+async function makeClone() {
+  if (!clip) {
+    flash('clone-status', 'Please record or upload audio first.', 'err');
+    return;
+  }
+  if (clipLen > 0 && clipLen < NEED) {
+    flash('clone-status', 'This clip is ' + mmss(clipLen) + ' long. VoiceFlow needs at least 1:00 of audio. Record a bit more or choose a longer file.', 'err');
+    return;
+  }
+  const name = document.getElementById('voice-name').value.trim() || 'My Voice';
+  const btn = document.getElementById('clone-btn');
+  btn.innerHTML = '<div class="spin"></div> Cloning…';
+  btn.disabled = true;
+  flash('clone-status', 'Creating your voice clone…', 'info');
+  try {
+    const fd = new FormData();
+    fd.append('voice_name', name);
+    fd.append('audio_file', clip, clip.name || clipName);
+    const r = await fetch('/api/clone-voice', { method: 'POST', headers: myKey ? { 'X-API-Key': myKey } : {}, body: fd });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'Clone failed');
+    flash('clone-status', '"' + d.name + '" is ready. Moving to Speak & Share…', 'ok');
+    pickedId = d.voice_id;
+    pickedName = d.name;
+    voiceStash = null;
+    setTimeout(() => jump(2), 1000);
+  } catch (e) {
+    flash('clone-status', '✗ ' + e.message, 'err');
+  } finally {
+    btn.innerHTML = 'Create my voice clone';
+    btn.disabled = false;
+  }
+}
+
+async function loadVoices() {
+  if (pickedId) {
+    document.getElementById('sel-name').textContent = pickedName;
+    document.getElementById('sel-bar').classList.add('on');
+    document.getElementById('voice-picker').style.display = 'none';
+    return;
+  }
+  document.getElementById('voice-picker').style.display = '';
+  document.getElementById('sel-bar').classList.remove('on');
+  if (!voiceStash) {
+    document.getElementById('vgrid-cloned').innerHTML = '<div class="vempty">Loading…</div>';
+    document.getElementById('vgrid-premade').innerHTML = '<div class="vempty">Loading…</div>';
+    try {
+      const r = await fetch('/api/voices', { headers: myKey ? { 'X-API-Key': myKey } : {} });
+      const list = await r.json();
+      if (!r.ok) throw new Error(list.detail);
+      voiceStash = {
+        cloned: list.filter(v => v.category === 'cloned'),
+        premade: list.filter(v => v.category !== 'cloned'),
+      };
+    } catch (e) {
+      document.getElementById('vgrid-cloned').innerHTML = '<div class="vempty" style="color:var(--danger)">' + esc(e.message) + '</div>';
+      document.getElementById('vgrid-premade').innerHTML = '';
+      return;
+    }
+  }
+  drawVoices();
+}
+
+function drawVoices() {
+  document.getElementById('tab-cloned').innerHTML = 'My Voices <span class="count">' + voiceStash.cloned.length + '</span>';
+  document.getElementById('tab-premade').innerHTML = 'ElevenLabs Voices <span class="count">' + voiceStash.premade.length + '</span>';
+
+  function paint(where, list, mine) {
+    const el = document.getElementById(where);
+    if (!list.length) {
+      el.innerHTML = mine
+        ? '<div class="vempty">No cloned voices yet. Finish Step 1 to create one.</div>'
+        : '<div class="vempty">No voices found.</div>';
+      return;
+    }
+    el.innerHTML = list.map(v => `
+      <div class="vcard ${v.voice_id === pickedId ? 'selected' : ''}" role="listitem" tabindex="0"
+           data-vid="${esc(v.voice_id)}" data-vname="${esc(v.name)}">
+        <div class="vicon">${mine ? faceSvg : sparkSvg}</div>
+        <div style="flex:1"><div class="vname">${esc(v.name)}</div><span class="vtag">${esc(v.category)}</span></div>
+        ${mine ? '<button class="btn btn-danger" data-del="1" style="padding:.25rem .55rem;font-size:.7rem">Delete</button>' : ''}
+      </div>`).join('');
+
+    el.querySelectorAll('.vcard').forEach(card => {
+      const vid = card.dataset.vid, vname = card.dataset.vname;
+      card.onclick = () => {
+        pickedId = vid;
+        pickedName = vname;
+        document.getElementById('sel-name').textContent = vname;
+        document.getElementById('sel-bar').classList.add('on');
+        document.getElementById('voice-picker').style.display = 'none';
+      };
+      card.onkeydown = e => { if (e.key === 'Enter') card.onclick(); };
+      const del = card.querySelector('[data-del]');
+      if (del) del.onclick = e => nukeVoice(e, vid, vname);
+    });
+  }
+
+  paint('vgrid-cloned', voiceStash.cloned, true);
+  paint('vgrid-premade', voiceStash.premade, false);
+
+  document.getElementById('vgrid-cloned').style.display = whichTab === 'cloned' ? 'grid' : 'none';
+  document.getElementById('vgrid-premade').style.display = whichTab === 'premade' ? 'grid' : 'none';
+  document.getElementById('tab-cloned').classList.toggle('active', whichTab === 'cloned');
+  document.getElementById('tab-premade').classList.toggle('active', whichTab === 'premade');
+}
+
+function showTab(which) {
+  whichTab = which;
+  drawVoices();
+}
+
+function changeVoice() {
+  pickedId = null;
+  document.getElementById('sel-bar').classList.remove('on');
+  document.getElementById('voice-picker').style.display = '';
+  if (voiceStash) drawVoices();
+}
+
+async function nukeVoice(e, id, name) {
+  e.stopPropagation();
+  if (!confirm('Delete "' + name + '"?')) return;
+  const r = await fetch('/api/voices/' + id, { method: 'DELETE', headers: myKey ? { 'X-API-Key': myKey } : {} });
+  if (r.ok) {
+    if (voiceStash) voiceStash.cloned = voiceStash.cloned.filter(v => v.voice_id !== id);
+    if (pickedId === id) changeVoice();
+    else drawVoices();
+  }
+}
+
+function usePhrase(btn) {
+  document.getElementById('saybox').value = btn.textContent;
+  document.getElementById('saybox').focus();
+}
+
+function sayKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sayIt();
+  }
+}
+
+async function sayIt() {
+  const words = document.getElementById('saybox').value.trim();
+  if (!words) {
+    flash('tts-status', 'Please type something or tap a quick phrase.', 'err');
+    return;
+  }
+  if (!pickedId) {
+    flash('tts-status', 'Please select a voice first.', 'err');
+    return;
+  }
+  if (words.length > MAX_CHARS) {
+    flash('tts-status', 'That is ' + words.length + ' characters. Say it in ' + MAX_CHARS + ' or fewer, or break it into two goes.', 'err');
+    return;
+  }
+  const btn = document.getElementById('tts-btn');
+  btn.innerHTML = '<div class="spin"></div> Generating…';
+  btn.disabled = true;
+  flash('tts-status', 'Synthesizing…', 'info');
+  document.getElementById('tts-out').classList.remove('on');
+
+  try {
+    const h = { 'Content-Type': 'application/json' };
+    if (myKey) h['X-API-Key'] = myKey;
+    const r = await fetch('/api/tts', {
+      method: 'POST',
+      headers: h,
+      body: JSON.stringify({
+        voice_id: pickedId,
+        text: words,
+        stability: parseFloat(document.getElementById('stab').value),
+        similarity_boost: parseFloat(document.getElementById('sim').value),
+        style: parseFloat(document.getElementById('style').value),
+      }),
+    });
+    if (!r.ok) {
+      const d = await r.json();
+      throw new Error(d.detail || 'TTS failed');
+    }
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    document.getElementById('tts-audio').src = url;
+    if (document.getElementById('play-for-me').checked) document.getElementById('tts-audio').play();
+    document.getElementById('tts-dl').href = url;
+    document.getElementById('tts-out').classList.add('on');
+    document.getElementById('tts-status').classList.remove('on');
+
+    if (roomSock && roomSock.readyState === WebSocket.OPEN) {
+      const wait = parseFloat(document.getElementById('broadcast-delay').value) || 0;
+      const shoot = () => {
+        roomSock.send(JSON.stringify({ type: 'speaking', text: words }));
+        const reader = new FileReader();
+        reader.onload = () => {
+          const b64 = reader.result.split(',')[1];
+          roomSock.send(JSON.stringify({ type: 'audio_chunk', data: b64 }));
+        };
+        reader.readAsDataURL(blob);
+      };
+      if (wait > 0) setTimeout(shoot, wait * 1000);
+      else shoot();
+    }
+  } catch (e) {
+    flash('tts-status', '✗ ' + e.message, 'err');
+  } finally {
+    btn.innerHTML = 'Speak';
+    btn.disabled = false;
+  }
+}
+
+async function openRoom() {
+  try {
+    const r = await fetch('/api/rooms/create', { method: 'POST' });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail);
+    myRoom = d.room_code;
+    roomSecret = d.host_token;
+    document.getElementById('room-code-txt').textContent = myRoom;
+    document.getElementById('room-link-txt').textContent = location.origin + location.pathname + '?room=' + myRoom;
+    document.getElementById('room-idle').style.display = 'none';
+    document.getElementById('room-active').style.display = '';
+
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    roomSock = new WebSocket(proto + '://' + location.host + '/ws/host/' + myRoom);
+    // the token goes in the first frame rather than the URL, so it never lands in a server log
+    roomSock.onopen = () => {
+      roomSock.send(JSON.stringify({ type: 'auth', token: roomSecret }));
+    };
+    roomSock.onmessage = e => {
+      let d2;
+      try { d2 = JSON.parse(e.data); } catch { return; }
+      if (d2.type === 'auth_ok') {
+        clearInterval(countTimer);
+        countTimer = setInterval(() => {
+          if (roomSock && roomSock.readyState === WebSocket.OPEN) roomSock.send(JSON.stringify({ type: 'listener_count' }));
+        }, 5000);
+      }
+      if (d2.type === 'listener_count') document.getElementById('lc-num').textContent = d2.count;
+      if (d2.type === 'error') alert(d2.message);
+    };
+    roomSock.onclose = () => { clearInterval(countTimer); };
+  } catch (e) {
+    alert('Could not create room: ' + e.message);
+  }
+}
+
+async function shutRoom() {
+  if (!myRoom) return;
+  if (!confirm('Close the room? Listeners will be disconnected.')) return;
+  const code = myRoom, secret = roomSecret;
+  if (roomSock) roomSock.close();
+  roomSock = null;
+  clearInterval(countTimer);
+  try {
+    await fetch('/api/rooms/' + encodeURIComponent(code), { method: 'DELETE', headers: { 'X-Host-Token': secret } });
+  } catch {}
+  myRoom = null;
+  roomSecret = null;
+  document.getElementById('room-active').style.display = 'none';
+  document.getElementById('room-idle').style.display = '';
+  document.getElementById('lc-num').textContent = '0';
+}
+
+function copied(btn) {
+  const old = btn.textContent;
+  btn.textContent = 'Copied!';
+  setTimeout(() => (btn.textContent = old), 1800);
+}
+
+function copyCode(btn) {
+  if (!myRoom) return;
+  navigator.clipboard.writeText(myRoom).then(() => copied(btn));
+}
+
+function copyLink(btn) {
+  if (!myRoom) return;
+  navigator.clipboard.writeText(location.origin + location.pathname + '?room=' + myRoom).then(() => copied(btn));
+}
+
+async function hopIn() {
+  const code = document.getElementById('join-code').value.trim().toUpperCase();
+  if (!/^[A-Z0-9]{8}$/.test(code)) {
+    flash('join-status', 'Enter the full 8-character room code.', 'err');
+    return;
+  }
+  flash('join-status', 'Checking room…', 'info');
+  try {
+    const r = await fetch('/api/rooms/' + code + '/exists');
+    if (!r.ok) {
+      const d = await r.json();
+      throw new Error(d.detail);
+    }
+    flash('join-status', 'Room found. Opening listener...', 'ok');
+    setTimeout(() => { location.href = '/?room=' + code; }, 700);
+  } catch (e) {
+    flash('join-status', '✗ ' + e.message, 'err');
+  }
+}
+
+function beListener(code) {
+  document.getElementById('listen-room-code').textContent = 'Room ' + code;
+  flash('listen-status', 'Connecting to room…', 'info');
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  earSock = new WebSocket(proto + '://' + location.host + '/ws/listen/' + code);
+
+  earSock.onopen = () => {
+    flash('listen-status', 'Connected. Waiting for the other person to speak', 'ok');
+  };
+
+  earSock.onmessage = async e => {
+    let d;
+    try { d = JSON.parse(e.data); } catch { return; }
+    if (d.type === 'ping') return;
+
+    if (d.type === 'room_closed') {
+      flash('listen-status', 'This room has been closed.', 'err');
+      earSock.close();
+      return;
+    }
+    if (d.type === 'speaking') {
+      document.getElementById('listen-transcript').innerHTML = '<span>' + esc(d.text) + '</span>';
+    }
+    if (d.type === 'audio_chunk') {
+      try {
+        const binary = atob(d.data);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        const url = URL.createObjectURL(new Blob([bytes], { type: 'audio/mpeg' }));
+        const player = document.getElementById('listen-audio');
+        player.src = url;
+        document.getElementById('listen-audio-bar').style.display = 'flex';
+        const p = player.play();
+        if (p && p.then) {
+          p.then(() => {
+            document.getElementById('enable-audio-btn').style.display = 'none';
+          }).catch(() => {
+            document.getElementById('enable-audio-btn').style.display = '';
+            flash('listen-status', 'Audio is ready, but your browser is blocking playback. Tap "Enable audio playback" above, then it will appear automatically next time.', 'err');
+          });
+        }
+      } catch {}
+    }
+  };
+
+  earSock.onerror = () => {
+    flash('listen-status', 'Connection error. The room may have expired.', 'err');
+  };
+  earSock.onclose = e => {
+    const s = document.getElementById('listen-status');
+    if (e.code === 4004) return flash('listen-status', 'That room no longer exists. Ask for a fresh code.', 'err');
+    if (e.code === 4013) return flash('listen-status', 'This room already has the maximum number of listeners.', 'err');
+    if (e.code === 4029) return flash('listen-status', 'Too many connection attempts. Wait a minute and reload.', 'err');
+    if (e.code === 4403) return flash('listen-status', 'This page was not allowed to connect to that room.', 'err');
+    if (!s.classList.contains('err')) flash('listen-status', 'Disconnected from room.', 'err');
+  };
+}
+
+// tiny silent wav, one real tap on it is enough for the browser to allow autoplay after
+const blankWav =
+  'data:audio/wav;base64,UklGRrQBAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YZABAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA';
+
+function wakeAudio() {
+  const player = document.getElementById('listen-audio');
+  player.src = blankWav;
+  const p = player.play();
+  const done = () => {
+    document.getElementById('enable-audio-btn').style.display = 'none';
+  };
+  if (p && p.then) {
+    p.then(() => { player.pause(); done(); }).catch(() => { done(); });
+  } else {
+    done();
+  }
+}
+
+(async () => {
+  const q = new URLSearchParams(location.search);
+  const rm = (q.get('room') || '').toUpperCase().trim();
+  if (rm) {
+    document.getElementById('listener-view').style.display = '';
+    document.getElementById('host-view').style.display = 'none';
+    document.getElementById('plug').style.display = 'none';
+    if (!/^[A-Z0-9]{8}$/.test(rm)) {
+      document.getElementById('listen-room-code').textContent = 'Invalid room link';
+      flash('listen-status', "That room link doesn't look right. Ask for it again, or type the 8-character code in yourself.", 'err');
+      document.getElementById('enable-audio-btn').style.display = 'none';
+      return;
+    }
+    beListener(rm);
+    return;
+  }
+  try {
+    const r = await fetch('/api/key-status');
+    if (r.ok) serverSays = await r.json();
+  } catch {}
+  paintKeyBox();
+  if (serverSays.credentials_error) {
+    document.getElementById('key-panel').classList.add('active');
+    flash('key-status', serverSays.credentials_error, 'err');
+  }
+  await checkConn();
+})();
+</script>
+</body>
+</html>
